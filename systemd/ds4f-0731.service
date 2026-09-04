@@ -1,0 +1,18 @@
+[Unit]
+Description=DeepSeek-V4-Flash-0731 on two DGX Sparks
+Wants=network-online.target docker.service
+After=network-online.target docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=%h/deepseek-v4-flash-0731-2x-dgx-spark
+ExecStartPre=%h/deepseek-v4-flash-0731-2x-dgx-spark/scripts/recover-stale-worker.sh
+ExecStart=%h/deepseek-v4-flash-0731-2x-dgx-spark/scripts/start.sh
+ExecStop=%h/deepseek-v4-flash-0731-2x-dgx-spark/scripts/stop.sh
+SuccessExitStatus=3
+TimeoutStartSec=infinity
+TimeoutStopSec=300
+
+[Install]
+WantedBy=multi-user.target

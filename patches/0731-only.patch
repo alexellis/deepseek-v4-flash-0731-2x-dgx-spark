@@ -1,0 +1,151 @@
+diff --git a/docker-compose.dspark.yml b/docker-compose.dspark.yml
+index 84d084e..ef5eed8 100644
+--- a/docker-compose.dspark.yml
++++ b/docker-compose.dspark.yml
+@@ -78,8 +78,6 @@ services:
+       # header, or the model generates from a dead state (empty turns /
+       # hallucinated DSML markup loop). Upstream issue #52, PR #53.
+       - ${DSPARK_ASSISTANT_FINAL_HOTFIX:-./patches/hotfix-dsv4-assistant-final-continuation.py}:/opt/hotfix-dsv4-assistant-final-continuation.py:ro
+-      # Native Vision-Exp ViT/Aligner + image_url processor (images only; no video).
+-      - ${DSPARK_VISION_EXP_HOTFIX:-./patches/hotfix-dsv4-vision-exp.py}:/opt/hotfix-dsv4-vision-exp.py:ro
+       # Issue #138: opt-in compatibility for singleton type-less assistant
+       # output_text items replayed through the Responses API.
+       - ${DSPARK_ISSUE138_HOTFIX:-./patches/hotfix-vllm-issue138-responses-history.py}:/opt/hotfix-vllm-issue138-responses-history.py:ro
+@@ -100,7 +98,7 @@ services:
+       HF_HUB_OFFLINE: "${HF_HUB_OFFLINE:-0}"
+       TRANSFORMERS_OFFLINE: "${TRANSFORMERS_OFFLINE:-0}"
+       HF_HUB_DISABLE_XET: "${HF_HUB_DISABLE_XET:-1}"
+-      DSPARK_MODEL: "${DSPARK_MODEL:-deepseek-ai/DeepSeek-V4-Flash-Vision-Exp}"
++      DSPARK_MODEL: "deepseek-ai/DeepSeek-V4-Flash-0731"
+       # Issue #26: sparsify SWA prefix-cache checkpoints (one tail per
+       # 4096-token segment + replay boundary). Complements the hybrid
+       # coordinator hotfix — SWA-min alone still 0/8 at 44K+ x8 because
+@@ -343,7 +341,7 @@ services:
+         if [ -n "$${TORCH_FR_DUMP_TEMP_FILE:-}" ]; then mkdir -p "$$(dirname "$${TORCH_FR_DUMP_TEMP_FILE}")" || echo "warn: cannot create flight-recorder dump dir; dumps will be lost (boot continues)" >&2; fi;
+         ENCODING_SOURCE="$${DSPARK_ENCODING_FILE:-}";
+         if [ -z "$${ENCODING_SOURCE}" ]; then
+-          MODEL_HUB_DIR=$$(printf '%s' "$${DSPARK_MODEL:-deepseek-ai/DeepSeek-V4-Flash-Vision-Exp}" | sed 's|/|--|g');
++          MODEL_HUB_DIR=$$(printf '%s' "$${DSPARK_MODEL:-deepseek-ai/DeepSeek-V4-Flash-0731}" | sed 's|/|--|g');
+           if [ -n "$${DSPARK_REVISION:-}" ] && [ -f "/cache/huggingface/hub/models--$${MODEL_HUB_DIR}/snapshots/$${DSPARK_REVISION}/encoding/encoding_dsv4.py" ]; then
+             ENCODING_SOURCE="/cache/huggingface/hub/models--$${MODEL_HUB_DIR}/snapshots/$${DSPARK_REVISION}/encoding/encoding_dsv4.py";
+           fi;
+@@ -363,7 +361,7 @@ services:
+         if [ "$${_dspark_keys_set}" = "1" ] || [ -n "$${VLLM_API_KEY:-}" ]; then bash /opt/dspark-patches/hotfix-vllm-redact-api-key-log.sh || exit 1; bash /opt/dspark-patches/hotfix-vllm-redact-api-key-log.sh --status || exit 1; fi;
+         if [ "$${DSPARK_ENABLE_ISSUE138_RESPONSES_HISTORY_COMPAT:-0}" = "1" ]; then python3 /opt/hotfix-vllm-issue138-responses-history.py || exit 1; fi;
+         if [ "$${DSPARK_ENABLE_CODEX_AGENT_MESSAGE_COMPAT:-0}" = "1" ]; then python3 /opt/hotfix-vllm-codex-agent-message.py || exit 1; fi;
+-        python3 /opt/hotfix-dsv4-vision-exp.py || exit 1; if [ "$${DSPARK_ENABLE_ISSUE141_SPARSE_MLA_CHUNK:-0}" = "1" ]; then python3 /opt/hotfix-dsv4-issue141-sparse-mla-decode-chunk.py || exit 1; fi; if [ "$${DSPARK_ENABLE_SP_INDEXER:-0}" = "1" ]; then python3 /opt/hotfix-dsv4-sp-indexer-prefill.py || exit 1; fi; if [ "$${DSPARK_ENABLE_DEEPGEMM_SM121_ALIAS:-0}" = "1" ]; then bash /opt/dspark-patches/hotfix-deepgemm-sm121-mqa-header-alias.sh || exit 1; fi; python3 /opt/hotfix-vllm-empty-encoder-output.py || exit 1; python3 /opt/hotfix-dsv4-issue27-partial-prefill-concurrency.py || exit 1; if [ "$${DSPARK_ENABLE_ADAPTIVE_CHUNK:-0}" = "1" ]; then python3 /opt/hotfix-dsv4-adaptive-prefill-chunk.py || exit 1; fi; if [ "$${DSPARK_ENABLE_REPLICATE_MARKOV:-0}" = "1" ]; then python3 /opt/hotfix-dsv4-replicate-markov-head.py || exit 1; fi; python3 /opt/hotfix-dsv4-issue43-decode-fairness-and-diag.py || exit 1; python3 /opt/hotfix-dsv4-issue26-hybrid-swa-min.py || exit 1; python3 /opt/hotfix-dsv4-issue133-triton-specialization.py || exit 1; if [ "$${DSPARK_SKIP_SUPPRESS_STOPS_HOTFIX:-0}" != "1" ]; then python3 /opt/hotfix-dsv4-suppress-stops-in-reasoning.py || exit 1; fi; VLLM_QUANTIZATION_ARGS="";
++        if [ "$${DSPARK_ENABLE_ISSUE141_SPARSE_MLA_CHUNK:-0}" = "1" ]; then python3 /opt/hotfix-dsv4-issue141-sparse-mla-decode-chunk.py || exit 1; fi; if [ "$${DSPARK_ENABLE_SP_INDEXER:-0}" = "1" ]; then python3 /opt/hotfix-dsv4-sp-indexer-prefill.py || exit 1; fi; if [ "$${DSPARK_ENABLE_DEEPGEMM_SM121_ALIAS:-0}" = "1" ]; then bash /opt/dspark-patches/hotfix-deepgemm-sm121-mqa-header-alias.sh || exit 1; fi; python3 /opt/hotfix-vllm-empty-encoder-output.py || exit 1; python3 /opt/hotfix-dsv4-issue27-partial-prefill-concurrency.py || exit 1; if [ "$${DSPARK_ENABLE_ADAPTIVE_CHUNK:-0}" = "1" ]; then python3 /opt/hotfix-dsv4-adaptive-prefill-chunk.py || exit 1; fi; if [ "$${DSPARK_ENABLE_REPLICATE_MARKOV:-0}" = "1" ]; then python3 /opt/hotfix-dsv4-replicate-markov-head.py || exit 1; fi; python3 /opt/hotfix-dsv4-issue43-decode-fairness-and-diag.py || exit 1; python3 /opt/hotfix-dsv4-issue26-hybrid-swa-min.py || exit 1; python3 /opt/hotfix-dsv4-issue133-triton-specialization.py || exit 1; if [ "$${DSPARK_SKIP_SUPPRESS_STOPS_HOTFIX:-0}" != "1" ]; then python3 /opt/hotfix-dsv4-suppress-stops-in-reasoning.py || exit 1; fi; VLLM_QUANTIZATION_ARGS="";
+         if [ "$${DSPARK_ENABLE_ASSISTANT_FINAL_HOTFIX:-0}" = "1" ]; then python3 /opt/hotfix-dsv4-assistant-final-continuation.py || exit 1; fi;
+         if [ "$${DSPARK_ENABLE_ISSUE136_XGRAMMAR_HOTFIX:-0}" = "1" ]; then python3 /opt/hotfix-vllm-issue136-xgrammar-termination.py || exit 1; fi;
+         if [ "$${ENABLE_VLLM_GB10_PATCH:-0}" = "1" ]; then
+@@ -389,10 +387,9 @@ services:
+         esac;
+         REVISION_ARGS="";
+         if [ -n "$${DSPARK_REVISION:-}" ]; then REVISION_ARGS="--revision $${DSPARK_REVISION}"; fi;
+-        LIMIT_MM_RAW='${LIMIT_MM_PER_PROMPT:-image=8}'; case "$${LIMIT_MM_RAW}" in image=*) _lim_n="$${LIMIT_MM_RAW#image=}"; case "$${_lim_n}" in ''|*[!0-9]*) echo "error: LIMIT_MM_PER_PROMPT image=N needs an integer (Anemll --limit-mm-per-prompt requires JSON)" >&2; exit 2 ;; esac; LIMIT_MM_JSON="{\"image\":$${_lim_n}}" ;; *) LIMIT_MM_JSON="$${LIMIT_MM_RAW}" ;; esac; LIMIT_MM_ARGS=(--limit-mm-per-prompt "$${LIMIT_MM_JSON}");
+-        exec /usr/local/bin/vllm serve ${DSPARK_MODEL:-deepseek-ai/DeepSeek-V4-Flash-Vision-Exp}
++        exec /usr/local/bin/vllm serve deepseek-ai/DeepSeek-V4-Flash-0731
+         $${REVISION_ARGS}
+-        --served-model-name ${SERVED_MODEL_NAME:-deepseek-v4-flash-vision-exp}
++        --served-model-name deepseek-v4-flash-0731
+         --host ${VLLM_HOST:-127.0.0.1}
+         --port ${VLLM_PORT:-8888}
+         --trust-remote-code
+@@ -414,7 +411,6 @@ services:
+         --enable-chunked-prefill
+         --speculative-config "$${SPECULATIVE_CONFIG}"
+         --tokenizer-mode deepseek_v4
+-        "$${LIMIT_MM_ARGS[@]}"
+         --distributed-executor-backend mp
+         --moe-backend flashinfer_b12x
+         --tool-call-parser deepseek_v4
+diff --git a/start-deepseek-v4-flash-dspark.sh b/start-deepseek-v4-flash-dspark.sh
+index 60cc869..fb4c4d1 100755
+--- a/start-deepseek-v4-flash-dspark.sh
++++ b/start-deepseek-v4-flash-dspark.sh
+@@ -124,36 +124,23 @@ if [ "${DSPARK_TP3:-0}" = "1" ]; then
+   export MAX_NUM_SEQS
+ fi
+
+-# Checkpoint flag: official Vision-Exp vs Keys abliterated weights.
+-#   ABLITERATED=0 → DSPARK_MODEL_OFFICIAL
+-#   ABLITERATED=1 → DSPARK_MODEL_ABLITERATED
+-DSPARK_MODEL_OFFICIAL="${DSPARK_MODEL_OFFICIAL:-deepseek-ai/DeepSeek-V4-Flash-Vision-Exp}"
+-DSPARK_MODEL_ABLITERATED="${DSPARK_MODEL_ABLITERATED:-drowzeys/keys-DeepSeekV4Flash-Vision-EXP-ablit}"
+-DEFAULT_OFFICIAL_REVISION="86f746b36186f0e567729a5c06a8c918caba82a9"
+-if [ "${ABLITERATED:-0}" = "1" ]; then
+-  DSPARK_MODEL="$DSPARK_MODEL_ABLITERATED"
+-  DSPARK_REVISION="${DSPARK_REVISION_ABLITERATED:-}"
+-else
+-  DSPARK_MODEL="$DSPARK_MODEL_OFFICIAL"
+-  if [ -z "${DSPARK_REVISION+x}" ]; then
+-    DSPARK_REVISION="$DEFAULT_OFFICIAL_REVISION"
+-  fi
+-fi
+-export ABLITERATED DSPARK_MODEL DSPARK_MODEL_OFFICIAL DSPARK_MODEL_ABLITERATED DSPARK_REVISION
+-
+-# Vision-Exp: Anemll SpeculativeConfig requires
+-# num_speculative_tokens % num_nextn_predict_layers == 0 when k > n_predict.
+-# Checkpoint n_predict=3 and dspark_block_size=5 → k in {6,9,…}. Official and
+-# Keys ablit share that layout (0731 was n_predict=1, which is why k=5 booted).
+-_mtp_k="${MTP_NUM_TOKENS:-6}"
++# This appliance is deliberately locked to the official 0731 checkpoint. The
++# matching DSpark draft head is part of the contract; model substitutions are
++# not accepted through environment variables.
++DSPARK_MODEL="deepseek-ai/DeepSeek-V4-Flash-0731"
++DSPARK_REVISION="9e165c30e2704aec5d9d593cce3eebd58bbef1cb"
++SERVED_MODEL_NAME="deepseek-v4-flash-0731"
++export DSPARK_MODEL DSPARK_REVISION SERVED_MODEL_NAME
++
++_mtp_k="${MTP_NUM_TOKENS:-5}"
+ case "$_mtp_k" in
+   ''|*[!0-9]*)
+     echo "error: MTP_NUM_TOKENS must be a non-negative integer (got ${_mtp_k})" >&2
+     exit 2
+     ;;
+ esac
+-if [ "$_mtp_k" -lt 5 ] || [ $((_mtp_k % 3)) -ne 0 ]; then
+-  echo "error: Vision-Exp requires MTP_NUM_TOKENS >= 5 and divisible by 3 (num_nextn_predict_layers=3); got ${_mtp_k}" >&2
++if [ "$_mtp_k" -lt 5 ]; then
++  echo "error: DeepSeek-V4-Flash-0731 requires MTP_NUM_TOKENS >= 5; got ${_mtp_k}" >&2
+   exit 2
+ fi
+ unset _mtp_k
+@@ -974,7 +961,7 @@ on_error() {
+ print_resolved_profile() {
+   echo "Resolved DSpark profile:"
+   echo "  project: $PROJECT_NAME"
+-  echo "  checkpoint: $DSPARK_MODEL (ABLITERATED=${ABLITERATED:-0})"
++  echo "  checkpoint: $DSPARK_MODEL @ $DSPARK_REVISION (fixed)"
+   if [ -n "${DSPARK_REVISION:-}" ]; then
+     echo "  revision: $DSPARK_REVISION"
+   else
+@@ -991,7 +978,7 @@ print_resolved_profile() {
+   fi
+   echo "  max batched tokens: ${MAX_NUM_BATCHED_TOKENS:-8192}"
+   echo "  gpu memory utilization: ${GPU_MEMORY_UTILIZATION:-0.835} (from GPU_MEMORY_UTILIZATION_TEXT=${GPU_MEMORY_UTILIZATION_TEXT:-0.835})"
+-  echo "  mtp speculative tokens: ${MTP_NUM_TOKENS:-6} (Vision-Exp: >=5 and divisible by 3)"
++  echo "  mtp speculative tokens: ${MTP_NUM_TOKENS:-5} (0731 block size: >=5)"
+   echo "  default thinking: $DEFAULT_THINKING (off/low/high/max)"
+   echo "  issue31 GPU thinking_token_budget hotfix: ${DSPARK_ENABLE_ISSUE31_GPU_HOTFIX:-0} (0=stock V2 / 1=apply)"
+   if [ "$DSPARK_ENABLE_ISSUE138_RESPONSES_HISTORY_COMPAT" = "1" ]; then
+@@ -1349,19 +1336,6 @@ if [ -f "$DSPARK_ASSISTANT_FINAL_HOTFIX" ]; then
+   ssh "$WORKER_HOST" "mkdir -p '${REMOTE_WORKER_DIR}/patches'"
+   scp "$DSPARK_ASSISTANT_FINAL_HOTFIX" "${WORKER_HOST}:${REMOTE_WORKER_DIR}/patches/hotfix-dsv4-assistant-final-continuation.py"
+ fi
+-DSPARK_VISION_EXP_HOTFIX="${DSPARK_VISION_EXP_HOTFIX:-$SCRIPT_DIR/patches/hotfix-dsv4-vision-exp.py}"
+-if [ -f "$DSPARK_VISION_EXP_HOTFIX" ]; then
+-  echo "Syncing Vision-Exp native image hotfix to ${WORKER_HOST}:${WORKER_DIR}/patches/"
+-  ssh "$WORKER_HOST" "mkdir -p '${REMOTE_WORKER_DIR}/patches'"
+-  scp "$DSPARK_VISION_EXP_HOTFIX" "${WORKER_HOST}:${REMOTE_WORKER_DIR}/patches/hotfix-dsv4-vision-exp.py"
+-fi
+-if [ -d "$SCRIPT_DIR/patches/vision_exp" ]; then
+-  echo "Syncing patches/vision_exp/ to ${WORKER_HOST}:${WORKER_DIR}/patches/vision_exp/"
+-  # Replace the dest dir. `scp -r vision_exp patches/` nests into
+-  # patches/vision_exp/vision_exp when the dest already exists.
+-  ssh "$WORKER_HOST" "rm -rf '${REMOTE_WORKER_DIR}/patches/vision_exp' && mkdir -p '${REMOTE_WORKER_DIR}/patches/vision_exp'"
+-  scp -r "$SCRIPT_DIR/patches/vision_exp/." "${WORKER_HOST}:${REMOTE_WORKER_DIR}/patches/vision_exp/"
+-fi
+ if [ -f "$DSPARK_ISSUE138_HOTFIX" ]; then
+   echo "Syncing issue #138 Responses history compatibility patcher to ${WORKER_HOST}:${WORKER_DIR}/patches/"
+   ssh "$WORKER_HOST" "mkdir -p '${REMOTE_WORKER_DIR}/patches'"

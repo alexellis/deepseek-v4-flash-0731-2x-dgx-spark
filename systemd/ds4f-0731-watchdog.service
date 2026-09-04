@@ -1,0 +1,14 @@
+[Unit]
+Description=Completion-probe watchdog for DeepSeek-V4-Flash-0731
+Requires=ds4f-0731.service
+After=ds4f-0731.service
+
+[Service]
+Type=simple
+WorkingDirectory=%h/deepseek-v4-flash-0731-2x-dgx-spark
+ExecStart=%h/deepseek-v4-flash-0731-2x-dgx-spark/scripts/watchdog.sh
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
