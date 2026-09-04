@@ -13,6 +13,15 @@ for script in scripts/*.sh; do
   bash -n "$script"
 done
 
+jq -e . data/controlled-sweep.json >/dev/null \
+  || fail "controlled sweep is not valid JSON"
+jq -e . data/real-traffic-2026-09-04.json >/dev/null \
+  || fail "production aggregate is not valid JSON"
+[ "$(jq -r '.base_url' data/controlled-sweep.json)" = "redacted" ] \
+  || fail "controlled sweep endpoint was not redacted"
+[ "$(jq '[.cases[].requests[] | select(.cancelled)] | length' data/controlled-sweep.json)" = "4" ] \
+  || fail "controlled sweep cancellation evidence changed"
+
 grep -Fq 'deepseek-ai/DeepSeek-V4-Flash-0731' patches/0731-only.patch \
   || fail "0731 model lock is absent from the runtime patch"
 grep -Fq '9e165c30e2704aec5d9d593cce3eebd58bbef1cb' patches/0731-only.patch \

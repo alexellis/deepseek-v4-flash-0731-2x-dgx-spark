@@ -2,3 +2,4 @@
 .runtime/
 *.log
 .DS_Store
+scripts/toilgate-summary.sql

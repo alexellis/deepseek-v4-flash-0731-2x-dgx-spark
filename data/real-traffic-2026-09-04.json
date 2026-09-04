@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "dataset": "anonymised Toilgate production aggregates",
+  "period_utc": {
+    "start": "2026-09-04T06:43:41Z",
+    "end": "2026-09-04T16:18:31Z"
+  },
+  "model": "deepseek-v4-flash-0731",
+  "endpoint": "/v1/chat/completions",
+  "privacy": "No prompts, responses, email addresses, API keys, session identifiers, hostnames, or addresses are included.",
+  "summary": {
+    "requests": 982,
+    "http_200": 982,
+    "interrupted": 1,
+    "looped": 0,
+    "logical_prompt_tokens": 169206183,
+    "cached_prompt_tokens": 167338752,
+    "uncached_prompt_tokens": 1867431,
+    "completion_tokens": 592061,
+    "cache_fraction_percent": 98.9,
+    "traffic_shape": "981 of 982 requests came from one active principal; this is a daily-driver trace, not a concurrency benchmark."
+  },
+  "sustained_filter": {
+    "status": 200,
+    "interrupted": false,
+    "streamed": true,
+    "minimum_completion_tokens": 50,
+    "requires_positive_gen_tps": true,
+    "matching_requests": 974,
+    "matching_completion_tokens": 591578
+  },
+  "sustained_generation_tps": {
+    "mean": 59.1,
+    "p10": 37.5,
+    "p50": 57.4,
+    "p90": 81.7,
+    "minimum": 6.7,
+    "maximum": 100.4
+  },
+  "sustained_ttft_seconds": {
+    "mean": 2.14,
+    "p10": 0.79,
+    "p50": 1.33,
+    "p90": 3.25,
+    "p95": 4.56,
+    "p99": 10.84,
+    "maximum": 145.84
+  },
+  "by_completion_length": [
+    {"tokens": "50-149", "requests": 195, "mean_tps": 69.3, "median_tps": 73.7, "minimum_tps": 20.6, "maximum_tps": 100.4},
+    {"tokens": "150-499", "requests": 457, "mean_tps": 62.1, "median_tps": 63.2, "minimum_tps": 6.7, "maximum_tps": 89.8},
+    {"tokens": "500-1499", "requests": 222, "mean_tps": 49.8, "median_tps": 49.0, "minimum_tps": 22.6, "maximum_tps": 79.8},
+    {"tokens": "1500+", "requests": 100, "mean_tps": 46.4, "median_tps": 46.8, "minimum_tps": 28.7, "maximum_tps": 72.2}
+  ],
+  "by_uncached_prompt_length": [
+    {"tokens": "<1K", "requests": 616, "mean_uncached_tokens": 531, "mean_ttft_seconds": 1.15, "maximum_ttft_seconds": 3.14},
+    {"tokens": "1-8K", "requests": 339, "mean_uncached_tokens": 2617, "mean_ttft_seconds": 2.63, "maximum_ttft_seconds": 7.13},
+    {"tokens": "8-32K", "requests": 15, "mean_uncached_tokens": 12790, "mean_ttft_seconds": 9.82, "maximum_ttft_seconds": 14.92},
+    {"tokens": "32K+", "requests": 4, "mean_uncached_tokens": 115083, "mean_ttft_seconds": 84.24, "maximum_ttft_seconds": 145.84}
+  ]
+}

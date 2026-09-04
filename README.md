@@ -1,5 +1,7 @@
 # DeepSeek-V4-Flash-0731 — 2× DGX Spark TP2
 
+![DeepSeek-V4-Flash-0731 served across two directly connected NVIDIA DGX Sparks](images/hero.png)
+
 Serve the **official DeepSeek-V4-Flash-0731 checkpoint** across two NVIDIA
 DGX Sparks as one tensor-parallel vLLM engine. The profile uses NVFP4 DS-MLA
 KV, the checkpoint's matching DSpark speculative drafter, mixed-prefill
@@ -42,7 +44,10 @@ for one stream. Warm prefix reuse is much faster and is central to making the
 lane feel responsive.
 
 The values above describe the qualified family of configurations, not a
-guarantee for another pair, prompt, temperature, or client.
+guarantee for another pair, prompt, temperature, or client. The complete
+19-case controlled sweep, all raw request observations, and an anonymised
+982-request production trace are published in
+[`docs/benchmarks.md`](docs/benchmarks.md).
 
 ## Why 0731 only?
 
