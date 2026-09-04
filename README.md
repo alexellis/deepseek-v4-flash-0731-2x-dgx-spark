@@ -1,6 +1,6 @@
 # DeepSeek-V4-Flash-0731 — 2× DGX Spark TP2
 
-![DeepSeek-V4-Flash-0731 served across two directly connected NVIDIA DGX Sparks](images/hero.png)
+![DeepSeek-V4-Flash-0731 served across two directly connected NVIDIA DGX Sparks](images/hero.jpg)
 
 Serve the **official DeepSeek-V4-Flash-0731 checkpoint** across two NVIDIA
 DGX Sparks as one tensor-parallel vLLM engine. The profile uses NVFP4 DS-MLA
