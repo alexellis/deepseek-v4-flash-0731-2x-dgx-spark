@@ -4,6 +4,33 @@ There is no single honest tokens-per-second number for a speculative model.
 This page keeps controlled endpoint measurements, manually classified work,
 and production gateway telemetry separate.
 
+## Matched before/after: profile-driven overlays (2026-09-27)
+
+Standard [RigMark](https://github.com/alexellis/rigmark) protocol 1.1.0 at
+`c5a0db01`, low reasoning, 4,096-token decode, 5 decode runs, 3 prefill pairs,
+3 concurrency rounds. Both runs used the same Spark pair and the pinned image,
+about 30 minutes apart. The baseline is the previous profile (fixed
+1,024-token prefill chunks, one PCIe function, no runtime overlays); the tuned
+run is the new `.env.example` profile (see
+[tuning](tuning.md#profile-driven-speed-ups-2026-09-27)). Receipts:
+[`baseline`](../data/rigmark-2026-09-27-baseline.json),
+[`tuned`](../data/rigmark-2026-09-27-tuned.json).
+
+| RigMark cell | Baseline | Tuned | Change |
+|---|---:|---:|---:|
+| Cold prefill 8K | 1,688 tok/s | 2,128 tok/s | **+26.1%** |
+| Cold prefill 32K | 1,672 tok/s | 2,010 tok/s | **+20.2%** |
+| Cold prefill 64K | 1,652 tok/s | 2,019 tok/s | **+22.2%** |
+| Code decode | 70.8 tok/s | 74.4 tok/s | +5.1% |
+| Structured decode | 83.5 tok/s | 85.9 tok/s | +2.8% |
+| Prose decode | 46.8 tok/s | 47.6 tok/s | +1.7% |
+| Short-code aggregate C1 / C2 / C4 | 51.5 / 79.5 / 113.5 | 53.2 / 80.6 / 120.4 | +3.3 / +1.4 / +6.0% |
+
+A separate thinking-off screen on the same boots measured cold 128K time to
+first token at 82.4 s before and 65.4 s after (−20.5%). Both profiles passed
+15/15 RigMark basic gates; the tuned profile also passed exact three-key
+retrieval over 114,614 tokens and a tool call.
+
 ## Controlled prompt/concurrency sweep
 
 The raw data is [`data/controlled-sweep.json`](../data/controlled-sweep.json):

@@ -58,6 +58,17 @@ if [ "${CHECK_RUNTIME:-0}" = "1" ]; then
   if grep -Fq 'hotfix-dsv4-vision-exp.py:ro' .runtime/docker-compose.dspark.yml; then
     fail "Vision-Exp hotfix remains mounted in the active runtime"
   fi
+  for overlay in patches/runtime/*.py; do
+    name="$(basename "$overlay")"
+    cmp -s "$overlay" ".runtime/patches/$name" \
+      || fail "runtime overlay $name was not installed"
+    python3 -c 'import ast, sys; ast.parse(open(sys.argv[1]).read())' "$overlay" \
+      || fail "runtime overlay $name does not parse"
+  done
+  for flag in DSPARK_TP2_ALLREDUCE DSPARK_INDEXER_ROW_SPLIT DSPARK_FP8_LM_HEAD DSPARK_FP8_AUX_DENSE; do
+    grep -Fq "$flag" .runtime/docker-compose.dspark.yml \
+      || fail "runtime overlay switch $flag is not wired into Compose"
+  done
 fi
 
 echo "Recipe validation passed."

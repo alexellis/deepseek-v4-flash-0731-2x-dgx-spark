@@ -11,6 +11,11 @@ This appliance profile is built on the work of the local-AI community.
 - DeepSeek provides the official
   [`DeepSeek-V4-Flash-0731`](https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash-0731)
   checkpoint and its matching DSpark draft head.
+- [othexmr/GLM-5.3-Flash-NVFP4-2x-4x-DGX-Sparks-RiNGSiDE](https://github.com/othexmr/GLM-5.3-Flash-NVFP4-2x-4x-DGX-Sparks-RiNGSiDE)
+  (Apache-2.0) inspired the runtime overlays in `patches/runtime`: the two-rank
+  all-reduce exchange is derived from its collectives patch, and the query-row
+  indexer split and FP8 dense copies re-implement its ideas. See
+  [`patches/runtime/NOTICE`](patches/runtime/NOTICE).
 - The vLLM, FlashInfer, DFlash/DSpark, NCCL, and wider DGX Spark communities
   made the underlying serving stack possible.
 

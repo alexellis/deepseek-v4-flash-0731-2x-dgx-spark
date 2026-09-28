@@ -3,3 +3,4 @@
 *.log
 .DS_Store
 scripts/toilgate-summary.sql
+__pycache__/
