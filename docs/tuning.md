@@ -68,13 +68,14 @@ here; it runs eagerly with CUDA graphs. At c=1:
   already runs at roughly the BF16 tensor-core roofline.
 
 Each change below is an opt-in overlay in `patches/runtime` with its own
-`.env` switch. The profile in `.env.example` enables all of them.
+`.env` switch. The profile in `.env.example` enables all of them except the FP8 compressor
+copies (see the incident below).
 
 | Change | Switch | Effect |
 |---|---|---|
 | Both PCIe functions of the cable | `NCCL_IB_HCA=…f0,roceP2p1s0f0`, `NCCL_CROSS_NIC=0` | 67 MB all-reduce 6.4 → 3.3 ms; prefill all-reduce 2.9 → 1.2 s per 32K |
 | FP8 lm_head copy (Marlin W8A16, decode M ≤ 64) | `DSPARK_FP8_LM_HEAD=1` | 2.0–2.65× on that GEMM, ~1.2 ms saved per read |
-| FP8 compressor projections (N ≥ 1024 only) | `DSPARK_FP8_AUX_DENSE=1` | 1.4–1.7× on those GEMMs (DRAM-streaming); smaller N lose and stay BF16 |
+| FP8 compressor projections (N ≥ 1024 only), **off by default** | `DSPARK_FP8_AUX_DENSE=1` | 1.4–1.7× on those GEMMs (DRAM-streaming); smaller N lose and stay BF16; ~1.5% decode |
 | Query-row split of the DSA prefill indexer | `DSPARK_INDEXER_ROW_SPLIT=1` | exact top-k ids, int32 gather only; ~3% at 128K |
 | Two-rank all-reduce as one exchange | `DSPARK_TP2_ALLREDUCE=p2p` | one network step instead of two for ≤ 512 KiB messages |
 | Admission-aware adaptive prefill chunk (v2) | `DSPARK_ENABLE_ADAPTIVE_CHUNK=1` | full 8,192-token chunks only when nobody is decoding or waiting; −16% at 32K |
@@ -134,3 +135,30 @@ measurable difference once both functions were in use.
   image; not worth it for roughly 5% of prefill.
 - **Prefill chunks above 1,024 without admission control**: see the v1
   starvation above.
+
+### Incident: engine crash on 2026-09-28
+
+About 17 minutes into real multi-agent traffic after a power-on, with every
+overlay enabled, the head rank died with `CUBLAS_STATUS_INTERNAL_ERROR`. The
+failing call was the stock BF16 `torch.mm` of a compressor projection, during a
+mixed step: a 1,024-token prefill chunk of a 29K-token, mostly cached prompt,
+plus one decoding request. The FP8 aux-dense wrapper was on the stack (its BF16
+fallback path). The kernel logged no Xid, and the same call shape runs fine in
+isolation.
+
+It did not reproduce in about 1.5 hours of targeted tests on the same pair:
+- a cold 470K-token prefill with concurrent chats;
+- 25 minutes each of 3-session agent replays (413 and 474 requests, prompts
+  to ~100K), including one after a warm-up-less Docker restart matching the
+  power-on.
+
+Because the crash is unexplained, the profile ships defensively:
+- `DSPARK_FP8_AUX_DENSE=0`: the only overlay on the parallel aux streams and on
+  the crash stack, worth only ~1.5% decode;
+- `DSPARK_ADAPTIVE_CHUNK_MAX_DEPTH=131072`: keeps big chunks inside the depth
+  they were qualified to.
+
+On the guarded profile, 32K / 128K cold TTFT is 16.0 s / 65.9 s (baseline
+19.5 s / 82.4 s), with retrieval passing. If you see this error, report it with
+both ranks' logs.
+

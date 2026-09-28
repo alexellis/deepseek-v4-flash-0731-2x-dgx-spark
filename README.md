@@ -154,7 +154,7 @@ Stop both ranks with:
 | GPU utilisation | 0.835 | Leaves room for graphs/JIT |
 | Breakable graphs | off | Regular graphs were faster here |
 | NCCL functions | both PCIe functions of the cable | ~2× all-reduce bandwidth |
-| lm_head / compressor | FP8 copies at decode M | Fewer bytes per decode step |
+| lm_head | FP8 copy at decode M | Fewer bytes per decode step |
 | Prefill indexer | query rows split across ranks | Exact, cheaper at depth |
 | Small all-reduce | one send/recv exchange | One network step, not two |
 

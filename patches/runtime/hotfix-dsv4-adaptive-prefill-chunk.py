@@ -19,6 +19,11 @@ v2 cap, evaluated per request at both chunking sites:
 * configured threshold if another request is waiting and could be admitted
   this step (running below max_num_seqs, in-flight prefills below the #27
   cap), so the newcomer gets budget in the same step;
+* configured threshold if any prefilling request is already deeper than
+  ``DSPARK_ADAPTIVE_CHUNK_MAX_DEPTH`` computed tokens (default 131072, the
+  depth big chunks were validated to; 0 disables the guard). On 2026-09-28 an
+  engine died during a ~470K-token cold prefill with big chunks enabled;
+  until deeper chunks are qualified, depth falls back to 1024;
 * otherwise ``max_num_batched_tokens`` split evenly across the prefilling
   requests (running prefill chunks, plus the one being admitted), rounded
   down to a multiple of the threshold and never below it.
@@ -70,6 +75,10 @@ WAITING_NEW = (
 HELPER = '''
 
 # [dspark-adaptive-chunk-v2] helper (module level; called from schedule()).
+import os as _dspark_ac_os
+_DSPARK_ADAPTIVE_MAX_DEPTH = int(_dspark_ac_os.environ.get("DSPARK_ADAPTIVE_CHUNK_MAX_DEPTH", "131072"))
+
+
 def _dspark_adaptive_chunk_cap(sched, admitting):
     """Chunk cap for one prefill; see hotfix-dsv4-adaptive-prefill-chunk.py."""
     cfg = sched.scheduler_config
@@ -92,6 +101,11 @@ def _dspark_adaptive_chunk_cap(sched, admitting):
         if ((inflight_cap <= 0 or inflight < inflight_cap)
                 and slots < sched.max_num_running_reqs):
             return base
+    max_depth = _DSPARK_ADAPTIVE_MAX_DEPTH
+    if max_depth > 0 and any(
+            r.is_prefill_chunk and r.num_computed_tokens >= max_depth
+            for r in running):
+        return base
     prefilling = sum(1 for r in running if r.is_prefill_chunk)
     if admitting:
         prefilling += 1
