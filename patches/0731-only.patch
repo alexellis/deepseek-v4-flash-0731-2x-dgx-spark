@@ -1,8 +1,21 @@
 diff --git a/docker-compose.dspark.yml b/docker-compose.dspark.yml
-index 84d084e..ef5eed8 100644
+index 84d084e..1592188 100644
 --- a/docker-compose.dspark.yml
 +++ b/docker-compose.dspark.yml
-@@ -78,8 +78,6 @@ services:
+@@ -52,6 +52,12 @@ services:
+       - ${DSPARK_ISSUE55_HOTFIX:-./patches/hotfix-dsv4-issue55-tool-truncation.py}:/opt/hotfix-dsv4-issue55-tool-truncation.py:ro
+       # Issue #109: encoder-only EC producer steps must not emit phantom token 0.
+       - ${DSPARK_EMPTY_ENCODER_OUTPUT_HOTFIX:-./patches/hotfix-vllm-empty-encoder-output.py}:/opt/hotfix-vllm-empty-encoder-output.py:ro
++      # 0731 appliance (profile-driven, 2026-09-27): opt-in runtime overlays.
++      - ${DSPARK_TP2_P2P_ALLREDUCE_HOTFIX:-./patches/hotfix-dsv4-tp2-p2p-allreduce.py}:/opt/hotfix-dsv4-tp2-p2p-allreduce.py:ro
++      - ${DSPARK_INDEXER_ROW_SPLIT_HOTFIX:-./patches/hotfix-dsv4-indexer-row-split.py}:/opt/hotfix-dsv4-indexer-row-split.py:ro
++      - ${DSPARK_FP8_LM_HEAD_HOTFIX:-./patches/hotfix-dsv4-fp8-lm-head.py}:/opt/hotfix-dsv4-fp8-lm-head.py:ro
++      - ${DSPARK_FP8_AUX_DENSE_HOTFIX:-./patches/hotfix-dsv4-fp8-aux-dense.py}:/opt/hotfix-dsv4-fp8-aux-dense.py:ro
++      - ${DSPARK_PROFILE_DIR:-./profiles}:/profiles
+       # Issue #27 partial-prefill concurrency hotfix (enforce max_num_partial_prefills).
+       - ${DSPARK_ISSUE27_HOTFIX:-./patches/hotfix-dsv4-issue27-partial-prefill-concurrency.py}:/opt/hotfix-dsv4-issue27-partial-prefill-concurrency.py:ro
+       # Adaptive prefill chunk: 1024 only while decode lanes run; else full batch.
+@@ -78,8 +84,6 @@ services:
        # header, or the model generates from a dead state (empty turns /
        # hallucinated DSML markup loop). Upstream issue #52, PR #53.
        - ${DSPARK_ASSISTANT_FINAL_HOTFIX:-./patches/hotfix-dsv4-assistant-final-continuation.py}:/opt/hotfix-dsv4-assistant-final-continuation.py:ro
@@ -11,7 +24,7 @@ index 84d084e..ef5eed8 100644
        # Issue #138: opt-in compatibility for singleton type-less assistant
        # output_text items replayed through the Responses API.
        - ${DSPARK_ISSUE138_HOTFIX:-./patches/hotfix-vllm-issue138-responses-history.py}:/opt/hotfix-vllm-issue138-responses-history.py:ro
-@@ -100,7 +98,7 @@ services:
+@@ -100,7 +104,7 @@ services:
        HF_HUB_OFFLINE: "${HF_HUB_OFFLINE:-0}"
        TRANSFORMERS_OFFLINE: "${TRANSFORMERS_OFFLINE:-0}"
        HF_HUB_DISABLE_XET: "${HF_HUB_DISABLE_XET:-1}"
@@ -20,7 +33,23 @@ index 84d084e..ef5eed8 100644
        # Issue #26: sparsify SWA prefix-cache checkpoints (one tail per
        # 4096-token segment + replay boundary). Complements the hybrid
        # coordinator hotfix — SWA-min alone still 0/8 at 44K+ x8 because
-@@ -343,7 +341,7 @@ services:
+@@ -297,6 +301,15 @@ services:
+       # Adaptive long-prefill chunk cap (1024 only while decode lanes run).
+       # Default 1 = apply; 0 = stock static cap. Gated for A/B.
+       DSPARK_ENABLE_ADAPTIVE_CHUNK: "${DSPARK_ENABLE_ADAPTIVE_CHUNK:-0}"
++      DSPARK_ADAPTIVE_CHUNK_MAX_DEPTH: "${DSPARK_ADAPTIVE_CHUNK_MAX_DEPTH:-131072}"
++      DSPARK_TP2_ALLREDUCE: "${DSPARK_TP2_ALLREDUCE:-nccl}"
++      DSPARK_TP2_ALLREDUCE_MAX_BYTES: "${DSPARK_TP2_ALLREDUCE_MAX_BYTES:-524288}"
++      DSPARK_INDEXER_ROW_SPLIT: "${DSPARK_INDEXER_ROW_SPLIT:-0}"
++      DSPARK_INDEXER_ROW_SPLIT_MIN_ROWS: "${DSPARK_INDEXER_ROW_SPLIT_MIN_ROWS:-1024}"
++      DSPARK_INDEXER_ROW_SPLIT_MIN_KEYS: "${DSPARK_INDEXER_ROW_SPLIT_MIN_KEYS:-4096}"
++      DSPARK_FP8_LM_HEAD: "${DSPARK_FP8_LM_HEAD:-0}"
++      DSPARK_FP8_AUX_DENSE: "${DSPARK_FP8_AUX_DENSE:-0}"
++      DSPARK_PROFILER_ARGS: "${DSPARK_PROFILER_ARGS:-}"
+       DSPARK_ENABLE_REPLICATE_MARKOV: "${DSPARK_ENABLE_REPLICATE_MARKOV:-0}"
+       DSPARK_ENABLE_SP_INDEXER: "${DSPARK_ENABLE_SP_INDEXER:-0}"
+       DSPARK_SP_INDEXER_MIN_KEYS: "${DSPARK_SP_INDEXER_MIN_KEYS:-8192}"
+@@ -343,7 +356,7 @@ services:
          if [ -n "$${TORCH_FR_DUMP_TEMP_FILE:-}" ]; then mkdir -p "$$(dirname "$${TORCH_FR_DUMP_TEMP_FILE}")" || echo "warn: cannot create flight-recorder dump dir; dumps will be lost (boot continues)" >&2; fi;
          ENCODING_SOURCE="$${DSPARK_ENCODING_FILE:-}";
          if [ -z "$${ENCODING_SOURCE}" ]; then
@@ -29,16 +58,16 @@ index 84d084e..ef5eed8 100644
            if [ -n "$${DSPARK_REVISION:-}" ] && [ -f "/cache/huggingface/hub/models--$${MODEL_HUB_DIR}/snapshots/$${DSPARK_REVISION}/encoding/encoding_dsv4.py" ]; then
              ENCODING_SOURCE="/cache/huggingface/hub/models--$${MODEL_HUB_DIR}/snapshots/$${DSPARK_REVISION}/encoding/encoding_dsv4.py";
            fi;
-@@ -363,7 +361,7 @@ services:
+@@ -363,7 +376,7 @@ services:
          if [ "$${_dspark_keys_set}" = "1" ] || [ -n "$${VLLM_API_KEY:-}" ]; then bash /opt/dspark-patches/hotfix-vllm-redact-api-key-log.sh || exit 1; bash /opt/dspark-patches/hotfix-vllm-redact-api-key-log.sh --status || exit 1; fi;
          if [ "$${DSPARK_ENABLE_ISSUE138_RESPONSES_HISTORY_COMPAT:-0}" = "1" ]; then python3 /opt/hotfix-vllm-issue138-responses-history.py || exit 1; fi;
          if [ "$${DSPARK_ENABLE_CODEX_AGENT_MESSAGE_COMPAT:-0}" = "1" ]; then python3 /opt/hotfix-vllm-codex-agent-message.py || exit 1; fi;
 -        python3 /opt/hotfix-dsv4-vision-exp.py || exit 1; if [ "$${DSPARK_ENABLE_ISSUE141_SPARSE_MLA_CHUNK:-0}" = "1" ]; then python3 /opt/hotfix-dsv4-issue141-sparse-mla-decode-chunk.py || exit 1; fi; if [ "$${DSPARK_ENABLE_SP_INDEXER:-0}" = "1" ]; then python3 /opt/hotfix-dsv4-sp-indexer-prefill.py || exit 1; fi; if [ "$${DSPARK_ENABLE_DEEPGEMM_SM121_ALIAS:-0}" = "1" ]; then bash /opt/dspark-patches/hotfix-deepgemm-sm121-mqa-header-alias.sh || exit 1; fi; python3 /opt/hotfix-vllm-empty-encoder-output.py || exit 1; python3 /opt/hotfix-dsv4-issue27-partial-prefill-concurrency.py || exit 1; if [ "$${DSPARK_ENABLE_ADAPTIVE_CHUNK:-0}" = "1" ]; then python3 /opt/hotfix-dsv4-adaptive-prefill-chunk.py || exit 1; fi; if [ "$${DSPARK_ENABLE_REPLICATE_MARKOV:-0}" = "1" ]; then python3 /opt/hotfix-dsv4-replicate-markov-head.py || exit 1; fi; python3 /opt/hotfix-dsv4-issue43-decode-fairness-and-diag.py || exit 1; python3 /opt/hotfix-dsv4-issue26-hybrid-swa-min.py || exit 1; python3 /opt/hotfix-dsv4-issue133-triton-specialization.py || exit 1; if [ "$${DSPARK_SKIP_SUPPRESS_STOPS_HOTFIX:-0}" != "1" ]; then python3 /opt/hotfix-dsv4-suppress-stops-in-reasoning.py || exit 1; fi; VLLM_QUANTIZATION_ARGS="";
-+        if [ "$${DSPARK_ENABLE_ISSUE141_SPARSE_MLA_CHUNK:-0}" = "1" ]; then python3 /opt/hotfix-dsv4-issue141-sparse-mla-decode-chunk.py || exit 1; fi; if [ "$${DSPARK_ENABLE_SP_INDEXER:-0}" = "1" ]; then python3 /opt/hotfix-dsv4-sp-indexer-prefill.py || exit 1; fi; if [ "$${DSPARK_ENABLE_DEEPGEMM_SM121_ALIAS:-0}" = "1" ]; then bash /opt/dspark-patches/hotfix-deepgemm-sm121-mqa-header-alias.sh || exit 1; fi; python3 /opt/hotfix-vllm-empty-encoder-output.py || exit 1; python3 /opt/hotfix-dsv4-issue27-partial-prefill-concurrency.py || exit 1; if [ "$${DSPARK_ENABLE_ADAPTIVE_CHUNK:-0}" = "1" ]; then python3 /opt/hotfix-dsv4-adaptive-prefill-chunk.py || exit 1; fi; if [ "$${DSPARK_ENABLE_REPLICATE_MARKOV:-0}" = "1" ]; then python3 /opt/hotfix-dsv4-replicate-markov-head.py || exit 1; fi; python3 /opt/hotfix-dsv4-issue43-decode-fairness-and-diag.py || exit 1; python3 /opt/hotfix-dsv4-issue26-hybrid-swa-min.py || exit 1; python3 /opt/hotfix-dsv4-issue133-triton-specialization.py || exit 1; if [ "$${DSPARK_SKIP_SUPPRESS_STOPS_HOTFIX:-0}" != "1" ]; then python3 /opt/hotfix-dsv4-suppress-stops-in-reasoning.py || exit 1; fi; VLLM_QUANTIZATION_ARGS="";
++        if [ "$${DSPARK_ENABLE_ISSUE141_SPARSE_MLA_CHUNK:-0}" = "1" ]; then python3 /opt/hotfix-dsv4-issue141-sparse-mla-decode-chunk.py || exit 1; fi; if [ "$${DSPARK_ENABLE_SP_INDEXER:-0}" = "1" ]; then python3 /opt/hotfix-dsv4-sp-indexer-prefill.py || exit 1; fi; if [ "$${DSPARK_ENABLE_DEEPGEMM_SM121_ALIAS:-0}" = "1" ]; then bash /opt/dspark-patches/hotfix-deepgemm-sm121-mqa-header-alias.sh || exit 1; fi; python3 /opt/hotfix-vllm-empty-encoder-output.py || exit 1; python3 /opt/hotfix-dsv4-issue27-partial-prefill-concurrency.py || exit 1; if [ "$${DSPARK_ENABLE_ADAPTIVE_CHUNK:-0}" = "1" ]; then python3 /opt/hotfix-dsv4-adaptive-prefill-chunk.py || exit 1; fi; if [ "$${DSPARK_TP2_ALLREDUCE:-nccl}" != "nccl" ]; then python3 /opt/hotfix-dsv4-tp2-p2p-allreduce.py || exit 1; python3 /opt/hotfix-dsv4-tp2-p2p-allreduce.py --status; fi; if [ "$${DSPARK_INDEXER_ROW_SPLIT:-0}" = "1" ]; then python3 /opt/hotfix-dsv4-indexer-row-split.py || exit 1; fi; if [ "$${DSPARK_FP8_LM_HEAD:-0}" = "1" ]; then python3 /opt/hotfix-dsv4-fp8-lm-head.py || exit 1; fi; if [ "$${DSPARK_FP8_AUX_DENSE:-0}" = "1" ]; then python3 /opt/hotfix-dsv4-fp8-aux-dense.py || exit 1; fi; if [ "$${DSPARK_ENABLE_REPLICATE_MARKOV:-0}" = "1" ]; then python3 /opt/hotfix-dsv4-replicate-markov-head.py || exit 1; fi; python3 /opt/hotfix-dsv4-issue43-decode-fairness-and-diag.py || exit 1; python3 /opt/hotfix-dsv4-issue26-hybrid-swa-min.py || exit 1; python3 /opt/hotfix-dsv4-issue133-triton-specialization.py || exit 1; if [ "$${DSPARK_SKIP_SUPPRESS_STOPS_HOTFIX:-0}" != "1" ]; then python3 /opt/hotfix-dsv4-suppress-stops-in-reasoning.py || exit 1; fi; VLLM_QUANTIZATION_ARGS="";
          if [ "$${DSPARK_ENABLE_ASSISTANT_FINAL_HOTFIX:-0}" = "1" ]; then python3 /opt/hotfix-dsv4-assistant-final-continuation.py || exit 1; fi;
          if [ "$${DSPARK_ENABLE_ISSUE136_XGRAMMAR_HOTFIX:-0}" = "1" ]; then python3 /opt/hotfix-vllm-issue136-xgrammar-termination.py || exit 1; fi;
          if [ "$${ENABLE_VLLM_GB10_PATCH:-0}" = "1" ]; then
-@@ -389,10 +387,9 @@ services:
+@@ -389,10 +402,9 @@ services:
          esac;
          REVISION_ARGS="";
          if [ -n "$${DSPARK_REVISION:-}" ]; then REVISION_ARGS="--revision $${DSPARK_REVISION}"; fi;
@@ -51,7 +80,7 @@ index 84d084e..ef5eed8 100644
          --host ${VLLM_HOST:-127.0.0.1}
          --port ${VLLM_PORT:-8888}
          --trust-remote-code
-@@ -414,7 +411,6 @@ services:
+@@ -414,7 +426,6 @@ services:
          --enable-chunked-prefill
          --speculative-config "$${SPECULATIVE_CONFIG}"
          --tokenizer-mode deepseek_v4
@@ -59,14 +88,19 @@ index 84d084e..ef5eed8 100644
          --distributed-executor-backend mp
          --moe-backend flashinfer_b12x
          --tool-call-parser deepseek_v4
+@@ -429,3 +440,4 @@ services:
+         --master-addr ${MASTER_ADDR}
+         --master-port ${MASTER_PORT:-25000}
+         ${HEADLESS:+--headless}
++        $${DSPARK_PROFILER_ARGS:-}
 diff --git a/start-deepseek-v4-flash-dspark.sh b/start-deepseek-v4-flash-dspark.sh
-index 60cc869..fb4c4d1 100755
+index 60cc869..411cfd2 100755
 --- a/start-deepseek-v4-flash-dspark.sh
 +++ b/start-deepseek-v4-flash-dspark.sh
 @@ -124,36 +124,23 @@ if [ "${DSPARK_TP3:-0}" = "1" ]; then
    export MAX_NUM_SEQS
  fi
-
+ 
 -# Checkpoint flag: official Vision-Exp vs Keys abliterated weights.
 -#   ABLITERATED=0 → DSPARK_MODEL_OFFICIAL
 -#   ABLITERATED=1 → DSPARK_MODEL_ABLITERATED
@@ -129,7 +163,23 @@ index 60cc869..fb4c4d1 100755
    echo "  default thinking: $DEFAULT_THINKING (off/low/high/max)"
    echo "  issue31 GPU thinking_token_budget hotfix: ${DSPARK_ENABLE_ISSUE31_GPU_HOTFIX:-0} (0=stock V2 / 1=apply)"
    if [ "$DSPARK_ENABLE_ISSUE138_RESPONSES_HISTORY_COMPAT" = "1" ]; then
-@@ -1349,19 +1336,6 @@ if [ -f "$DSPARK_ASSISTANT_FINAL_HOTFIX" ]; then
+@@ -1296,6 +1283,15 @@ if [ -f "$DSPARK_ADAPTIVE_CHUNK_HOTFIX" ]; then
+   ssh "$WORKER_HOST" "mkdir -p '${REMOTE_WORKER_DIR}/patches'"
+   scp "$DSPARK_ADAPTIVE_CHUNK_HOTFIX" "${WORKER_HOST}:${REMOTE_WORKER_DIR}/patches/hotfix-dsv4-adaptive-prefill-chunk.py"
+ fi
++# 0731 appliance overlays (opt-in via .env; see the recipe's docs/tuning.md).
++for _dspark_overlay in hotfix-dsv4-tp2-p2p-allreduce.py hotfix-dsv4-indexer-row-split.py hotfix-dsv4-fp8-lm-head.py hotfix-dsv4-fp8-aux-dense.py; do
++  if [ -f "$SCRIPT_DIR/patches/$_dspark_overlay" ]; then
++    echo "Syncing $_dspark_overlay to ${WORKER_HOST}:${WORKER_DIR}/patches/"
++    ssh "$WORKER_HOST" "mkdir -p '${REMOTE_WORKER_DIR}/patches'"
++    scp "$SCRIPT_DIR/patches/$_dspark_overlay" "${WORKER_HOST}:${REMOTE_WORKER_DIR}/patches/$_dspark_overlay"
++  fi
++done
++unset _dspark_overlay
+ DSPARK_REPLICATE_MARKOV_HOTFIX="${DSPARK_REPLICATE_MARKOV_HOTFIX:-$SCRIPT_DIR/patches/hotfix-dsv4-replicate-markov-head.py}"
+ if [ -f "$DSPARK_REPLICATE_MARKOV_HOTFIX" ]; then
+   echo "Syncing replicate-Markov-head hotfix to ${WORKER_HOST}:${WORKER_DIR}/patches/"
+@@ -1349,19 +1345,6 @@ if [ -f "$DSPARK_ASSISTANT_FINAL_HOTFIX" ]; then
    ssh "$WORKER_HOST" "mkdir -p '${REMOTE_WORKER_DIR}/patches'"
    scp "$DSPARK_ASSISTANT_FINAL_HOTFIX" "${WORKER_HOST}:${REMOTE_WORKER_DIR}/patches/hotfix-dsv4-assistant-final-continuation.py"
  fi

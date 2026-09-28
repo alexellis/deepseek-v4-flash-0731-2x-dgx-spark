@@ -24,3 +24,10 @@ daily-driver workload, not a controlled concurrency experiment.
 The generation distribution excludes completions shorter than 50 tokens,
 non-streaming calls, interrupted calls, errors, and rows without a positive
 generation rate.
+
+## `rigmark-2026-09-27-baseline.json` and `rigmark-2026-09-27-tuned.json`
+
+Standard RigMark 1.1.0 receipts for the matched before/after in
+[`docs/benchmarks.md`](../docs/benchmarks.md). Host addresses were removed from
+the appliance description, and each receipt's scheduler field states the
+profile it actually ran. Measurements and model outputs are unchanged.

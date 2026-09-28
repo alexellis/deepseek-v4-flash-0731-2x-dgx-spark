@@ -41,7 +41,10 @@ draft acceptance and say little about how quickly an agent writes prose. Long
 agent turns are also dominated by prefill: the older published sweep measured
 about **1,428–1,713 prompt tok/s** at 8K–32K and **1,665 prompt tok/s** at 131K
 for one stream. Warm prefix reuse is much faster and is central to making the
-lane feel responsive.
+lane feel responsive. The profile-driven overlays added on 27 September 2026
+raised cold prefill by 20–26% in a matched RigMark run (about 2,010–2,130
+prompt tok/s at 8K–64K; 128K cold TTFT 82 s → 65 s) with decode unchanged or
+slightly faster; see [`docs/benchmarks.md`](docs/benchmarks.md).
 
 The values above describe the qualified family of configurations, not a
 guarantee for another pair, prompt, temperature, or client. The complete
@@ -75,6 +78,11 @@ tested for those checkpoints. They are intentionally not switches here.
 - A separate management network for SSH is recommended.
 - Enough local NVMe on each node for the checkpoint, image, and JIT caches.
 - Passwordless SSH from the head to the worker.
+- An address and MTU 9000 on **both PCIe functions** of the cabled port on
+  each node (`rocep1s0fN` and `roceP2p1s0fN`). The profile lists both in
+  `NCCL_IB_HCA`; see [docs/tuning.md](docs/tuning.md#use-both-pcie-functions-of-the-cable)
+  for the one-off NetworkManager setup, or list only the first function to
+  keep the older single-function behaviour.
 
 ```text
 management:  operator ───── head ───── worker
@@ -140,11 +148,15 @@ Stop both ranks with:
 | Context ceiling | 1,048,576 | Long-horizon agent lane |
 | Active sequences | 6 | Small-team concurrency |
 | Batch tokens | 8,192 | Prefill/decode balance |
-| Long-prefill chunk | 1,024 | Prevents prefill from starving decode |
+| Long-prefill chunk | 1,024 (8,192 when idle) | Adaptive v2: big chunks only when no one decodes or waits |
 | In-flight prefills | 2 | Qualified mixed-load setting |
 | DSpark draft length | 5 | Matches 0731 block size |
 | GPU utilisation | 0.835 | Leaves room for graphs/JIT |
 | Breakable graphs | off | Regular graphs were faster here |
+| NCCL functions | both PCIe functions of the cable | ~2× all-reduce bandwidth |
+| lm_head | FP8 copy at decode M | Fewer bytes per decode step |
+| Prefill indexer | query rows split across ranks | Exact, cheaper at depth |
+| Small all-reduce | one send/recv exchange | One network step, not two |
 
 See [docs/tuning.md](docs/tuning.md) before changing these together. The
 runtime integration and pin are explained in [docs/recipe.md](docs/recipe.md),
@@ -163,7 +175,9 @@ The upstream runtime commit and our small 0731-only patch are part of the
 qualified configuration. Do not casually follow upstream `main`:
 
 1. change `RUNTIME_COMMIT` in `scripts/lib.sh`;
-2. make `patches/0731-only.patch` apply cleanly;
+2. make `patches/0731-only.patch` apply cleanly and re-check the anchors of
+   every overlay in `patches/runtime` (each refuses to patch a file it does not
+   recognise);
 3. run `CHECK_RUNTIME=1 ./scripts/gate.sh`;
 4. cold-boot both ranks;
 5. repeat smoke, long-context, prose, code, tool-call, and mixed-load tests.

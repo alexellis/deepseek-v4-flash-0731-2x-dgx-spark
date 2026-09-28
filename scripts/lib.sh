@@ -5,7 +5,12 @@ RUNTIME_DIR="${RUNTIME_DIR:-$RECIPE_ROOT/.runtime}"
 RUNTIME_REPO="https://github.com/MiaAI-Lab/DeepSeek-v4-Flash-DSpark-2x-DGX-Spark.git"
 RUNTIME_COMMIT="c444d7032957f5a5437261d5366fd06b27a01760"
 RUNTIME_MARKER="$RUNTIME_DIR/.alex-0731-recipe"
+# The marker records the upstream commit plus a digest of this recipe's patch
+# and runtime overlays, so a recipe update rebuilds a stale runtime.
+RUNTIME_OVERLAY_DIGEST="$(cd "$RECIPE_ROOT" && cat patches/0731-only.patch patches/runtime/*.py | sha256sum | cut -c1-16)"
+RUNTIME_STAMP="$RUNTIME_COMMIT $RUNTIME_OVERLAY_DIGEST"
 export RECIPE_ROOT RUNTIME_DIR RUNTIME_REPO RUNTIME_COMMIT RUNTIME_MARKER
+export RUNTIME_OVERLAY_DIGEST RUNTIME_STAMP
 
 require_env() {
   if [ ! -f "$RECIPE_ROOT/.env" ]; then

@@ -1,0 +1,17 @@
+Runtime overlays for the DeepSeek-V4-Flash-0731 appliance.
+
+hotfix-dsv4-tp2-p2p-allreduce.py is derived from
+othexmr/GLM-5.3-Flash-NVFP4-2x-4x-DGX-Sparks-RiNGSiDE at
+6606f7638aff044a8170e414818477679934a1c3
+(docker/base/10-collectives/patch_vllm_tp2_allreduce.py), licensed under the
+Apache License, Version 2.0 (https://www.apache.org/licenses/LICENSE-2.0).
+It was modified: DSPARK_* environment names, a 512 KiB default ceiling, an eager
+warm exchange at creation, fallback logging, and a --status mode.
+
+hotfix-dsv4-indexer-row-split.py, hotfix-dsv4-fp8-lm-head.py and
+hotfix-dsv4-fp8-aux-dense.py are independent implementations of ideas from the
+same RiNGSiDE recipe (glm53_indexer_rowsplit.py, glm53_dual_fp8_dense.py); no
+code was copied. The row-split idea traces to rhys101's SG18 prefill split.
+
+hotfix-dsv4-adaptive-prefill-chunk.py (v2) replaces the upstream MiaAI-Lab
+patcher of the same name (MIT) with an admission-aware, fair-share version.

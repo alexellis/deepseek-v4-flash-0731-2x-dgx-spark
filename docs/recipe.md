@@ -17,7 +17,18 @@ Git. The patch:
 - locks the checkpoint revision to `9e165c30e2704aec5d9d593cce3eebd58bbef1cb`;
 - locks the served alias to `deepseek-v4-flash-0731`;
 - requires a DSpark draft length of at least five;
-- removes the Vision-Exp hotfix and multimodal argument from the active path.
+- removes the Vision-Exp hotfix and multimodal argument from the active path;
+- mounts the opt-in runtime overlays below, syncs them to the worker, and adds
+  an optional `DSPARK_PROFILER_ARGS` hook for the vLLM torch profiler.
+
+Bootstrap then copies `patches/runtime/*.py` into the runtime's `patches/`:
+four new opt-in hotfixes (two-rank all-reduce exchange, query-row indexer
+split, FP8 lm_head, FP8 compressor projections) and the admission-aware
+adaptive-chunk v2, which replaces the upstream v1 patcher of the same name.
+Each overlay checks its anchors in the image and refuses to patch a file it
+does not recognise; each has a `--status` mode. The runtime marker records the
+upstream commit plus a digest of the patch and overlays, so a recipe update
+regenerates `.runtime/` (the previous copy is kept as `.runtime.prev-*`).
 
 The public wrapper only runs TP2 and only prepares official weights. The
 upstream checkout remains visible under `.runtime/` for auditability.
