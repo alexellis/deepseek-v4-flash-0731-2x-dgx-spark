@@ -7,6 +7,13 @@ DGX Sparks as one tensor-parallel vLLM engine. The profile uses NVFP4 DS-MLA
 KV, the checkpoint's matching DSpark speculative drafter, mixed-prefill
 fairness fixes, prefix caching, and a 1M-token context ceiling.
 
+**AI-assisted workflow:** This repository was built and tested with Codex. It is
+designed to be driven by a capable AI coding agent, rather than followed as a
+universal step-by-step manual. Give the agent the full checkout, ask it to read
+this README and any `AGENTS.md`, adapt the commands to your environment, run the
+checks, and investigate errors from their output. Review machine-specific
+changes before applying them.
+
 This repository is deliberately narrow: **two Sparks, TP2, and the official
 0731 text checkpoint**. It does not expose Vision-Exp or an ablated checkpoint
 selector. Every hostname, address, interface, and filesystem path in the
